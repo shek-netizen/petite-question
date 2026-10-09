@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffe4ef">
+  <meta name="description" content="Un petit message interactif plein de cœurs ❤️">
+  <title>Une petite question ❤️</title>
+  <style>
+    :root { --pink:#ec4899; --dark:#7f1d4e; --soft:#fff1f7; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100svh; display: grid; place-items: center;
+      padding: 22px; overflow-x: hidden; font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      color: var(--dark);
+      background: radial-gradient(circle at 15% 15%, #fff 0 3%, transparent 22%),
+                  radial-gradient(circle at 85% 80%, #ffd5e6 0 4%, transparent 28%),
+                  linear-gradient(145deg, #fff0f6, #ffe0ed 55%, #fff7fb);
+    }
+    .card {
+      width: min(100%, 520px); position: relative; text-align: center;
+      background: rgba(255,255,255,.86); border: 1px solid rgba(236,72,153,.18);
+      border-radius: 28px; padding: clamp(24px, 6vw, 42px);
+      box-shadow: 0 24px 70px rgba(190, 24, 93, .14); backdrop-filter: blur(8px);
+    }
+    .heart { font-size: 46px; animation: pulse 1.5s ease-in-out infinite; }
+    h1 { font-size: clamp(1.45rem, 5vw, 2rem); line-height: 1.3; margin: 15px 0 10px; }
+    .sub { margin: 0; color: #a04b75; line-height: 1.6; }
+    .arena {
+      height: 135px; margin-top: 28px; position: relative; display: flex;
+      align-items: center; justify-content: center; gap: 14px; isolation: isolate;
+      border-radius: 20px; background: #fff5f9; border: 1px dashed #f5b4d0;
+      overflow: hidden;
+    }
+    button {
+      border: 0; border-radius: 999px; padding: 13px 22px; font-size: 1rem;
+      font-weight: 750; cursor: pointer; touch-action: manipulation;
+      box-shadow: 0 7px 16px rgba(127,29,78,.13); transition: transform .15s ease, box-shadow .15s ease;
+    }
+    button:focus-visible { outline: 3px solid #7c3aed; outline-offset: 3px; }
+    #yes { color: white; background: linear-gradient(135deg, #ec4899, #db2777); z-index: 2; }
+    #yes:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(219,39,119,.28); }
+    #no { color: #9d174d; background: white; border: 1px solid #f9a8d4; z-index: 3; }
+    .message { min-height: 52px; margin-top: 20px; font-size: 1.1rem; font-weight: 650; line-height: 1.5; }
+    .tiny { font-size: .78rem; color: #b36a8b; margin-top: 12px; }
+    .floating { position: fixed; pointer-events: none; opacity: 0; animation: floatUp 4.5s linear forwards; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+    @keyframes floatUp { 0% { opacity: 0; transform: translateY(20px) scale(.8) rotate(0); } 15% {opacity:.8} 100% {opacity:0; transform: translateY(-105vh) scale(1.4) rotate(24deg)} }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="heart" aria-hidden="true">💗</div>
+    <h1>Veux-tu être ma personne préférée ? ❤️</h1>
+    <p class="sub">J’ai une petite question pour toi… 😊</p>
+    <div class="arena" id="arena" aria-label="Choisis une réponse">
+      <button id="yes" type="button">OUI ❤️</button>
+      <button id="no" type="button">NON 🙈</button>
+    </div>
+    <div class="message" id="message" role="status" aria-live="polite"></div>
+    <p class="tiny">Psst… essaie de cliquer sur NON 😄</p>
+  </main>
+  <script>
+    const arena = document.getElementById('arena');
+    const yes = document.getElementById('yes');
+    const no = document.getElementById('no');
+    const message = document.getElementById('message');
+    let attempts = 0;
+
+    function moveNo() {
+      const area = arena.getBoundingClientRect();
+      const btn = no.getBoundingClientRect();
+      const maxX = Math.max(0, area.width - btn.width - 16);
+      const maxY = Math.max(0, area.height - btn.height - 16);
+      let x = 8 + Math.random() * maxX;
+      let y = 8 + Math.random() * maxY;
+      // Keep the button away from the YES button when possible.
+      const yesBox = yes.getBoundingClientRect();
+      for (let i = 0; i < 12; i++) {
+        const candidate = { left: area.left + x, top: area.top + y,
+          right: area.left + x + btn.width, bottom: area.top + y + btn.height };
+        const overlaps = !(candidate.right < yesBox.left - 8 || candidate.left > yesBox.right + 8 ||
+                           candidate.bottom < yesBox.top - 8 || candidate.top > yesBox.bottom + 8);
+        if (!overlaps) break;
+        x = 8 + Math.random() * maxX;
+        y = 8 + Math.random() * maxY;
+      }
+      no.style.position = 'absolute';
+      no.style.left = `${x}px`;
+      no.style.top = `${y}px`;
+      no.style.transform = `rotate(${Math.random() * 14 - 7}deg)`;
+      attempts++;
+      message.textContent = attempts > 2 ? 'Oups, il est rapide ce bouton ! 😂💗' : 'Hé hé… raté ! 🙈';
+    }
+
+    // Desktop: run away as the pointer approaches. Touch: move on first tap attempt.
+    no.addEventListener('pointerenter', (event) => {
+      if (event.pointerType === 'mouse' || event.pointerType === 'pen') moveNo();
+    });
+    no.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      moveNo();
+    });
+    no.addEventListener('click', (event) => {
+      event.preventDefault();
+      moveNo();
+    });
+    yes.addEventListener('click', () => {
+      message.textContent = 'Awww, tu viens de me faire sourire ! 💖🥰';
+      yes.textContent = 'OUIII ! 💖';
+      no.hidden = true;
+      for (let i = 0; i < 18; i++) {
+        const heart = document.createElement('span');
+        heart.className = 'floating';
+        heart.textContent = ['💗','💖','💕','❤️','✨'][Math.floor(Math.random() * 5)];
+        heart.style.left = `${Math.random() * 100}vw`;
+        heart.style.bottom = `${-10 - Math.random() * 20}px`;
+        heart.style.fontSize = `${18 + Math.random() * 24}px`;
+        heart.style.animationDelay = `${Math.random() * 1.1}s`;
+        document.body.appendChild(heart);
+        heart.addEventListener('animationend', () => heart.remove());
+      }
+    });
+    window.addEventListener('resize', () => {
+      if (!no.hidden) {
+        no.style.position = '';
+        no.style.left = '';
+        no.style.top = '';
+        no.style.transform = '';
+      }
+    });
+  </script>
+</body>
+</html>
